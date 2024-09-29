@@ -22,5 +22,8 @@ typedef enum {
 void initialize_board();
 void print_board();
 int move_piece(int from_row, int from_col, int to_row, int to_col);
+// Add this to chess_board.h
+int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
+               int *to_col);
 
 #endif

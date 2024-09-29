@@ -1,5 +1,6 @@
 #include "chess_board.h"
 #include <stdio.h>
+#include <string.h>
 
 Piece board[BOARD_SIZE][BOARD_SIZE];
 
@@ -42,4 +43,113 @@ void print_board() {
     printf("   +---+---+---+---+---+---+---+---+\n");
   }
   printf("     a   b   c   d   e   f   g   h\n");
+}
+
+// check the move for all pieces
+
+// Pawn (WITHOUT EN PASSANT)
+int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
+  Piece piece = board[from_row][from_col];
+  int direction = (piece == 'P') ? 1 : -1; // 'P' for white pawn, moving up
+  int start_row = (piece == 'P') ? 1 : 6;
+
+  // Debug print
+  printf("Validating pawn move: piece=%c, direction=%d, start_row=%d\n", piece,
+         direction, start_row);
+
+  // Move one square forward
+  if (from_col == to_col && to_row == from_row + direction &&
+      board[to_row][to_col] == ' ') { // Use ' ' for empty square
+    printf("Valid one square forward move\n");
+    return 1;
+  }
+
+  // Move two squares forward (only from the starting position)
+  if (from_col == to_col && from_row == start_row &&
+      to_row == from_row + 2 * direction &&
+      board[from_row + direction][from_col] == ' ' &&
+      board[to_row][to_col] == ' ') {
+    printf("Valid two square forward move\n");
+    return 1;
+  }
+
+  // capture diagonally
+  if ((to_col == from_col - 1 || to_col == from_col + 1) &&
+      to_row == from_row + direction) {
+    Piece target = board[to_row][to_col];
+    if (target != EMPTY && ((piece == WHITE_PAWN && target >= 'a' &&
+                             target <= 'z') || // black piece
+                            (piece == BLACK_PAWN && target >= 'A' &&
+                             target <= 'Z'))) { // white piece
+      return 1;
+    }
+  }
+
+  // TO DO: en passant
+  printf("Invalid pawn move\n");
+  return 0;
+}
+
+// TO DO: ROOK
+// TO DO: KNIGHT
+// TO DO: BISHOP
+// TO DO: QUEEN
+// TO DO: KING
+
+int is_valid_move(int from_row, int from_col, int to_row, int to_col) {
+  Piece piece = board[from_row][from_col];
+
+  // Check if the selected square is empty
+  if (piece == EMPTY) {
+    return 0; // no piece to move
+  }
+
+  switch (piece) {
+  case WHITE_PAWN:
+  case BLACK_PAWN:
+    return is_valid_pawn_move(from_row, from_col, to_row, to_col);
+  // TODO: Implement validation for the rest
+  default:
+    return 0; // Invalid if it's an unrecognized piece
+  }
+}
+
+int move_piece(int from_row, int from_col, int to_row, int to_col) {
+  if (!is_valid_move(from_row, from_col, to_row, to_col)) {
+    return 0; // invalid
+  }
+
+  board[to_row][to_col] = board[from_row][from_col];
+  board[from_row][from_col] = EMPTY;
+
+  return 1; // valid
+}
+
+// Add this to chess_board.c
+int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
+               int *to_col) {
+  if (strlen(move_str) != 4) {
+    printf("Invalid input length: %ld (input was: '%s')\n", strlen(move_str),
+           move_str); // Debug print
+    return 0;         // Invalid input length
+  }
+
+  *from_col = move_str[0] - 'a'; // Convert column 'a'-'h' to 0-7
+  *from_row = move_str[1] - '1'; // Convert row '1'-'8' to 0-7
+  *to_col = move_str[2] - 'a';   // Convert column 'a'-'h' to 0-7
+  *to_row = move_str[3] - '1';   // Convert row '1'-'8' to 0-7
+
+  // Debug print to show parsed move
+  printf("Parsed move: from (%d, %d) to (%d, %d)\n", *from_row, *from_col,
+         *to_row, *to_col);
+
+  // Check if the parsed values are within the valid board range
+  if (*from_col < 0 || *from_col >= BOARD_SIZE || *from_row < 0 ||
+      *from_row >= BOARD_SIZE || *to_col < 0 || *to_col >= BOARD_SIZE ||
+      *to_row < 0 || *to_row >= BOARD_SIZE) {
+    printf("Invalid coordinates\n"); // Debug print
+    return 0;                        // Invalid move
+  }
+
+  return 1; // Valid move input
 }
