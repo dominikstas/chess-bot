@@ -19,8 +19,6 @@ void initialize_board() {
     board[1][i] = 'P'; // Pawns
   }
 
-  printf("white - success\n");
-
   // black - small letters
   board[7][0] = board[7][7] = 'r'; // Rook
   board[7][1] = board[7][6] = 'n'; // Knight
@@ -30,11 +28,24 @@ void initialize_board() {
   for (int i = 0; i < BOARD_SIZE; i++) {
     board[6][i] = 'p'; // Pawns
   }
+}
 
-  printf("black - success");
+void print_board() {
+  printf("     a   b   c   d   e   f   g   h\n");
+  printf("   +---+---+---+---+---+---+---+---+\n");
+  for (int i = BOARD_SIZE - 1; i >= 0; i--) {
+    printf(" %d |", i + 1);
+    for (int j = 0; j < BOARD_SIZE; j++) {
+      printf(" %c |", board[i][j]);
+    }
+    printf(" %d\n", i + 1);
+    printf("   +---+---+---+---+---+---+---+---+\n");
+  }
+  printf("     a   b   c   d   e   f   g   h\n");
 }
 
 int main() {
   initialize_board();
+  print_board();
   return 0;
 }
