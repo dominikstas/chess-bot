@@ -49,9 +49,11 @@ void print_board() {
 
 // Pawn (WITHOUT EN PASSANT)
 int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
-  Piece piece = board[from_row][from_col];
+  char piece = board[from_row][from_col];
   int direction = (piece == 'P') ? 1 : -1; // 'P' for white pawn, moving up
   int start_row = (piece == 'P') ? 1 : 6;
+
+  // ... rest of the function remains the same ...
 
   // Debug print
   printf("Validating pawn move: piece=%c, direction=%d, start_row=%d\n", piece,
@@ -97,16 +99,15 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
 // TO DO: KING
 
 int is_valid_move(int from_row, int from_col, int to_row, int to_col) {
-  Piece piece = board[from_row][from_col];
+  char piece = board[from_row][from_col];
 
-  // Check if the selected square is empty
-  if (piece == EMPTY) {
+  if (piece == ' ') {
     return 0; // no piece to move
   }
 
   switch (piece) {
-  case WHITE_PAWN:
-  case BLACK_PAWN:
+  case 'P':
+  case 'p':
     return is_valid_pawn_move(from_row, from_col, to_row, to_col);
   // TODO: Implement validation for the rest
   default:
@@ -125,13 +126,10 @@ int move_piece(int from_row, int from_col, int to_row, int to_col) {
   return 1; // valid
 }
 
-// Add this to chess_board.c
 int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
                int *to_col) {
   if (strlen(move_str) != 4) {
-    printf("Invalid input length: %ld (input was: '%s')\n", strlen(move_str),
-           move_str); // Debug print
-    return 0;         // Invalid input length
+    return 0; // Invalid input length
   }
 
   *from_col = move_str[0] - 'a'; // Convert column 'a'-'h' to 0-7
@@ -139,16 +137,11 @@ int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
   *to_col = move_str[2] - 'a';   // Convert column 'a'-'h' to 0-7
   *to_row = move_str[3] - '1';   // Convert row '1'-'8' to 0-7
 
-  // Debug print to show parsed move
-  printf("Parsed move: from (%d, %d) to (%d, %d)\n", *from_row, *from_col,
-         *to_row, *to_col);
-
   // Check if the parsed values are within the valid board range
   if (*from_col < 0 || *from_col >= BOARD_SIZE || *from_row < 0 ||
       *from_row >= BOARD_SIZE || *to_col < 0 || *to_col >= BOARD_SIZE ||
       *to_row < 0 || *to_row >= BOARD_SIZE) {
-    printf("Invalid coordinates\n"); // Debug print
-    return 0;                        // Invalid move
+    return 0; // Invalid move
   }
 
   return 1; // Valid move input
