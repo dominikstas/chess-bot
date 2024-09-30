@@ -16,6 +16,7 @@ int main() {
   while (1) {
     printf("\n%s player's turn. Enter your move (e.g., e2e4): ",
            current_player == 0 ? "White" : "Black");
+
     if (fgets(move_str, sizeof(move_str), stdin) == NULL) {
       printf("Error reading input. Exiting...\n");
       break;
@@ -40,6 +41,11 @@ int main() {
     } else {
       printf("Invalid input format. Please use the format 'e2e4'.\n");
     }
+
+    // Clear input buffer
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+      ;
   }
 
   return 0;

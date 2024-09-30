@@ -53,12 +53,6 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   int direction = (piece == 'P') ? 1 : -1; // 'P' for white pawn, moving up
   int start_row = (piece == 'P') ? 1 : 6;
 
-  // ... rest of the function remains the same ...
-
-  // Debug print
-  printf("Validating pawn move: piece=%c, direction=%d, start_row=%d\n", piece,
-         direction, start_row);
-
   // Move one square forward
   if (from_col == to_col && to_row == from_row + direction &&
       board[to_row][to_col] == ' ') { // Use ' ' for empty square
