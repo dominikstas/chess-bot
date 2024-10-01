@@ -92,11 +92,26 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
 // TO DO: QUEEN
 // TO DO: KING
 
-int is_valid_move(int from_row, int from_col, int to_row, int to_col) {
+int is_valid_move(int from_row, int from_col, int to_row, int to_col,
+                  int current_player) {
   char piece = board[from_row][from_col];
 
   if (piece == ' ') {
+    printf("No piece to move\n");
     return 0; // no piece to move
+  }
+
+  // Check if the player is moving their own piece
+  if (current_player == 0) { // White player
+    if (piece >= 'a' && piece <= 'z') {
+      printf("White player cannot move black pieces\n");
+      return 0; // White player trying to move black piece
+    }
+  } else { // Black player
+    if (piece >= 'A' && piece <= 'Z') {
+      printf("Black player cannot move white pieces\n");
+      return 0; // Black player trying to move white piece
+    }
   }
 
   switch (piece) {
@@ -105,17 +120,20 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col) {
     return is_valid_pawn_move(from_row, from_col, to_row, to_col);
   // TODO: Implement validation for the rest
   default:
+    printf("Unrecognized piece\n");
     return 0; // Invalid if it's an unrecognized piece
   }
 }
 
-int move_piece(int from_row, int from_col, int to_row, int to_col) {
-  if (!is_valid_move(from_row, from_col, to_row, to_col)) {
+// Zmodyfikuj też funkcję move_piece:
+int move_piece(int from_row, int from_col, int to_row, int to_col,
+               int current_player) {
+  if (!is_valid_move(from_row, from_col, to_row, to_col, current_player)) {
     return 0; // invalid
   }
 
   board[to_row][to_col] = board[from_row][from_col];
-  board[from_row][from_col] = EMPTY;
+  board[from_row][from_col] = ' ';
 
   return 1; // valid
 }
