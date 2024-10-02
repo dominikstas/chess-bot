@@ -174,8 +174,7 @@ int is_valid_knight_move(int from_row, int from_col, int to_row, int to_col) {
     }
   }
 
-  // Knights move in an L-shape: 2 squares in one direction and 1 square
-  // perpendicular
+  // Knights move: 2 squares in one direction and 1 square perpendicular
   int row_diff = abs(to_row - from_row);
   int col_diff = abs(to_col - from_col);
 
@@ -183,11 +182,25 @@ int is_valid_knight_move(int from_row, int from_col, int to_row, int to_col) {
     return 1;
   }
 
-  printf("Invalid knight move: must move in L-shape\n");
+  printf("Invalid knight move\n");
   return 0;
 }
 
-// TO DO: QUEEN
+int is_valid_queen_move(int from_row, int from_col, int to_row, int to_col) {
+
+  // First, check if it's a valid rook move
+  if (from_row == to_row || from_col == to_col) {
+    return is_valid_rook_move(from_row, from_col, to_row, to_col);
+  }
+  // If not a rook move, check if it's a valid bishop move
+  else if (abs(to_row - from_row) == abs(to_col - from_col)) {
+    return is_valid_bishop_move(from_row, from_col, to_row, to_col);
+  }
+
+  printf("Invalid queen move\n");
+  return 0;
+}
+
 // TO DO: KING
 
 int is_valid_move(int from_row, int from_col, int to_row, int to_col,
@@ -225,6 +238,9 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
   case 'N':
   case 'n':
     return is_valid_knight_move(from_row, from_col, to_row, to_col);
+  case 'Q':
+  case 'q':
+    return is_valid_queen_move(from_row, from_col, to_row, to_col);
   // TODO: Implement validation for the rest
   default:
     printf("Unrecognized piece\n");

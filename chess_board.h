@@ -22,6 +22,9 @@ typedef enum {
 void initialize_board();
 void print_board();
 int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col);
+int is_valid_knight_move(int from_row, int from_col, int to_row, int to_col);
+int is_valid_bishop_move(int from_row, int from_col, int to_row, int to_col);
+int is_valid_rook_move(int from_row, int from_col, int to_row, int to_col);
 int is_valid_move(int from_row, int from_col, int to_row, int to_col,
                   int current_player);
 int move_piece(int from_row, int from_col, int to_row, int to_col,
