@@ -1,5 +1,6 @@
 #include "chess_board.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 Piece board[BOARD_SIZE][BOARD_SIZE];
@@ -84,31 +85,26 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   return 0;
 }
 
+// Rook
 int is_valid_rook_move(int from_row, int from_col, int to_row, int to_col) {
-  // Sprawdź, czy ruch jest w tej samej linii (poziomo lub pionowo)
   if (from_row != to_row && from_col != to_col) {
-    printf("Wieża może poruszać się tylko poziomo lub pionowo\n");
+    printf("Invalid rook move\n");
     return 0;
   }
-
-  // Określ kierunek ruchu
   int row_direction = (to_row > from_row) ? 1 : ((to_row < from_row) ? -1 : 0);
   int col_direction = (to_col > from_col) ? 1 : ((to_col < from_col) ? -1 : 0);
-
-  // Sprawdź, czy na drodze nie ma innych figur
   int current_row = from_row + row_direction;
   int current_col = from_col + col_direction;
 
   while (current_row != to_row || current_col != to_col) {
     if (board[current_row][current_col] != ' ') {
-      printf("Na drodze wieży znajduje się inna figura\n");
+      printf("Invalid rook move\n");
       return 0;
     }
     current_row += row_direction;
     current_col += col_direction;
   }
 
-  // Sprawdź, czy na polu docelowym nie ma figury tego samego koloru
   char moving_piece = board[from_row][from_col];
   char target_piece = board[to_row][to_col];
 
@@ -117,17 +113,53 @@ int is_valid_rook_move(int from_row, int from_col, int to_row, int to_col) {
          target_piece <= 'Z') ||
         (moving_piece >= 'a' && moving_piece <= 'z' && target_piece >= 'a' &&
          target_piece <= 'z')) {
-      printf("Nie można zbić własnej figury\n");
+      printf("Invalid rook move\n");
       return 0;
     }
   }
 
   return 1;
 }
-// TO DO: ROOK
+
+// bishop
+int is_valid_bishop_move(int from_row, int from_col, int to_row, int to_col) {
+  char piece = board[from_row][from_col];
+
+  if (abs(to_row - from_row) != abs(to_col - from_col)) {
+    printf("Invalid bishop move\n");
+    return 0;
+  }
+  int row_direction = (to_row > from_row) ? 1 : -1;
+  int col_direction = (to_col > from_col) ? 1 : -1;
+
+  int current_row = from_row + row_direction;
+  int current_col = from_col + col_direction;
+
+  while (current_row != to_row && current_col != to_col) {
+    if (board[current_row][current_col] != ' ') {
+      printf("Invalid bishop move\n");
+      return 0;
+    }
+    current_row += row_direction;
+    current_col += col_direction;
+  }
+
+  char target_piece = board[to_row][to_col];
+  if (target_piece != ' ') {
+    if ((piece >= 'A' && piece <= 'Z' && target_piece >= 'A' &&
+         target_piece <= 'Z') ||
+        (piece >= 'a' && piece <= 'z' && target_piece >= 'a' &&
+         target_piece <= 'z')) {
+      printf("Invalid bishop move\n");
+      return 0;
+    }
+  }
+
+  return 1;
+}
 
 // TO DO: KNIGHT
-// TO DO: BISHOP
+
 // TO DO: QUEEN
 // TO DO: KING
 
@@ -137,19 +169,19 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
 
   if (piece == ' ') {
     printf("No piece to move\n");
-    return 0; // no piece to move
+    return 0;
   }
 
   // Check if the player is moving their own piece
   if (current_player == 0) { // White player
     if (piece >= 'a' && piece <= 'z') {
       printf("White player cannot move black pieces\n");
-      return 0; // White player trying to move black piece
+      return 0;
     }
   } else { // Black player
     if (piece >= 'A' && piece <= 'Z') {
       printf("Black player cannot move white pieces\n");
-      return 0; // Black player trying to move white piece
+      return 0;
     }
   }
 
@@ -157,13 +189,16 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
   case 'P':
   case 'p':
     return is_valid_pawn_move(from_row, from_col, to_row, to_col);
-  case 'r':
   case 'R':
+  case 'r':
     return is_valid_rook_move(from_row, from_col, to_row, to_col);
-    // TODO: Implement validation for the rest
+  case 'B':
+  case 'b':
+    return is_valid_bishop_move(from_row, from_col, to_row, to_col);
+  // TODO: Implement validation for the rest
   default:
     printf("Unrecognized piece\n");
-    return 0; // Invalid if it's an unrecognized piece
+    return 0;
   }
 }
 
