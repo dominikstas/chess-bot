@@ -56,7 +56,6 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   // Move one square forward
   if (from_col == to_col && to_row == from_row + direction &&
       board[to_row][to_col] == ' ') { // Use ' ' for empty square
-    printf("Valid one square forward move\n");
     return 1;
   }
 
@@ -65,7 +64,6 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
       to_row == from_row + 2 * direction &&
       board[from_row + direction][from_col] == ' ' &&
       board[to_row][to_col] == ' ') {
-    printf("Valid two square forward move\n");
     return 1;
   }
 
@@ -86,7 +84,48 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   return 0;
 }
 
+int is_valid_rook_move(int from_row, int from_col, int to_row, int to_col) {
+  // Sprawdź, czy ruch jest w tej samej linii (poziomo lub pionowo)
+  if (from_row != to_row && from_col != to_col) {
+    printf("Wieża może poruszać się tylko poziomo lub pionowo\n");
+    return 0;
+  }
+
+  // Określ kierunek ruchu
+  int row_direction = (to_row > from_row) ? 1 : ((to_row < from_row) ? -1 : 0);
+  int col_direction = (to_col > from_col) ? 1 : ((to_col < from_col) ? -1 : 0);
+
+  // Sprawdź, czy na drodze nie ma innych figur
+  int current_row = from_row + row_direction;
+  int current_col = from_col + col_direction;
+
+  while (current_row != to_row || current_col != to_col) {
+    if (board[current_row][current_col] != ' ') {
+      printf("Na drodze wieży znajduje się inna figura\n");
+      return 0;
+    }
+    current_row += row_direction;
+    current_col += col_direction;
+  }
+
+  // Sprawdź, czy na polu docelowym nie ma figury tego samego koloru
+  char moving_piece = board[from_row][from_col];
+  char target_piece = board[to_row][to_col];
+
+  if (target_piece != ' ') {
+    if ((moving_piece >= 'A' && moving_piece <= 'Z' && target_piece >= 'A' &&
+         target_piece <= 'Z') ||
+        (moving_piece >= 'a' && moving_piece <= 'z' && target_piece >= 'a' &&
+         target_piece <= 'z')) {
+      printf("Nie można zbić własnej figury\n");
+      return 0;
+    }
+  }
+
+  return 1;
+}
 // TO DO: ROOK
+
 // TO DO: KNIGHT
 // TO DO: BISHOP
 // TO DO: QUEEN
@@ -118,14 +157,16 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
   case 'P':
   case 'p':
     return is_valid_pawn_move(from_row, from_col, to_row, to_col);
-  // TODO: Implement validation for the rest
+  case 'r':
+  case 'R':
+    return is_valid_rook_move(from_row, from_col, to_row, to_col);
+    // TODO: Implement validation for the rest
   default:
     printf("Unrecognized piece\n");
     return 0; // Invalid if it's an unrecognized piece
   }
 }
 
-// Zmodyfikuj też funkcję move_piece:
 int move_piece(int from_row, int from_col, int to_row, int to_col,
                int current_player) {
   if (!is_valid_move(from_row, from_col, to_row, to_col, current_player)) {
