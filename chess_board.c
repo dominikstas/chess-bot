@@ -158,7 +158,34 @@ int is_valid_bishop_move(int from_row, int from_col, int to_row, int to_col) {
   return 1;
 }
 
-// TO DO: KNIGHT
+// Knight
+int is_valid_knight_move(int from_row, int from_col, int to_row, int to_col) {
+  char piece = board[from_row][from_col];
+  char target_piece = board[to_row][to_col];
+
+  // Check if the target square has a piece of the same color
+  if (target_piece != ' ') {
+    if ((piece >= 'A' && piece <= 'Z' && target_piece >= 'A' &&
+         target_piece <= 'Z') ||
+        (piece >= 'a' && piece <= 'z' && target_piece >= 'a' &&
+         target_piece <= 'z')) {
+      printf("Invalid knight move: cannot capture own piece\n");
+      return 0;
+    }
+  }
+
+  // Knights move in an L-shape: 2 squares in one direction and 1 square
+  // perpendicular
+  int row_diff = abs(to_row - from_row);
+  int col_diff = abs(to_col - from_col);
+
+  if ((row_diff == 2 && col_diff == 1) || (row_diff == 1 && col_diff == 2)) {
+    return 1;
+  }
+
+  printf("Invalid knight move: must move in L-shape\n");
+  return 0;
+}
 
 // TO DO: QUEEN
 // TO DO: KING
@@ -195,6 +222,9 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
   case 'B':
   case 'b':
     return is_valid_bishop_move(from_row, from_col, to_row, to_col);
+  case 'N':
+  case 'n':
+    return is_valid_knight_move(from_row, from_col, to_row, to_col);
   // TODO: Implement validation for the rest
   default:
     printf("Unrecognized piece\n");
