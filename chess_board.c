@@ -55,7 +55,7 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
 
   // Move one square forward
   if (from_col == to_col && to_row == from_row + direction &&
-      board[to_row][to_col] == ' ') { // Use ' ' for empty square
+      board[to_row][to_col] == ' ') {
     return 1;
   }
 
@@ -67,14 +67,14 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
     return 1;
   }
 
-  // capture diagonally
+  // Capture diagonally
   if ((to_col == from_col - 1 || to_col == from_col + 1) &&
       to_row == from_row + direction) {
-    Piece target = board[to_row][to_col];
-    if (target != EMPTY && ((piece == WHITE_PAWN && target >= 'a' &&
-                             target <= 'z') || // black piece
-                            (piece == BLACK_PAWN && target >= 'A' &&
-                             target <= 'Z'))) { // white piece
+    char target = board[to_row][to_col];
+    if (target != ' ' && ((piece == 'P' && target >= 'a' &&
+                           target <= 'z') || // white pawn captures black piece
+                          (piece == 'p' && target >= 'A' &&
+                           target <= 'Z'))) { // black pawn captures white piece
       return 1;
     }
   }
