@@ -46,6 +46,7 @@ int main() {
 
     if (parse_move(move_str, &from_row, &from_col, &to_row, &to_col)) {
       if (move_piece(from_row, from_col, to_row, to_col, current_player)) {
+
         print_board();
         current_player = 1 - current_player; // Switch players
       } else {

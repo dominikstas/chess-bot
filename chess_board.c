@@ -5,6 +5,10 @@
 
 Piece board[BOARD_SIZE][BOARD_SIZE];
 
+// Global variables to track king positions
+int white_king_row = 0, white_king_col = 4;
+int black_king_row = 7, black_king_col = 4;
+
 void initialize_board() {
   for (int i = 0; i < BOARD_SIZE; i++) {
     for (int j = 0; j < BOARD_SIZE; j++) {
@@ -201,7 +205,149 @@ int is_valid_queen_move(int from_row, int from_col, int to_row, int to_col) {
   return 0;
 }
 
-// TO DO: KING
+// King movement validation
+int is_valid_king_move(int from_row, int from_col, int to_row, int to_col) {
+  // Regular king move: one square in any direction
+  int row_diff = abs(to_row - from_row);
+  int col_diff = abs(to_col - from_col);
+
+  if (row_diff > 1 || col_diff > 1) {
+    printf("Invalid king move: can only move one square in any direction\n");
+    return 0;
+  }
+
+  // Check if the target square has a piece of the same color
+  char piece = board[from_row][from_col];
+  char target_piece = board[to_row][to_col];
+  if (target_piece != ' ') {
+    if ((piece >= 'A' && piece <= 'Z' && target_piece >= 'A' &&
+         target_piece <= 'Z') ||
+        (piece >= 'a' && piece <= 'z' && target_piece >= 'a' &&
+         target_piece <= 'z')) {
+      printf("Invalid king move: cannot capture own piece\n");
+      return 0;
+    }
+  }
+
+  // TODO: Add castling logic here if desired
+
+  return 1;
+}
+
+// Helper function to check if a square is under attack
+int is_square_under_attack(int row, int col, int by_white) {
+  for (int i = 0; i < BOARD_SIZE; i++) {
+    for (int j = 0; j < BOARD_SIZE; j++) {
+      char piece = board[i][j];
+      if (piece == ' ')
+        continue;
+
+      // Check if the piece belongs to the attacking side
+      if (by_white && (piece < 'A' || piece > 'Z'))
+        continue;
+      if (!by_white && (piece < 'a' || piece > 'z'))
+        continue;
+
+      // Temporarily set the target square to empty to allow checking through
+      // pieces
+      char temp = board[row][col];
+      board[row][col] = ' ';
+
+      int valid_attack = is_valid_move(i, j, row, col, by_white);
+
+      // Restore the original piece
+      board[row][col] = temp;
+
+      if (valid_attack)
+        return 1;
+    }
+  }
+  return 0;
+}
+
+int is_king_in_check(int king_row, int king_col, int current_player) {
+  // Traverse the board and check if any opposing piece can attack the king.
+  // The exact implementation depends on the valid move checks for each piece
+  // type.
+
+  for (int i = 0; i < BOARD_SIZE; i++) {
+    for (int j = 0; j < BOARD_SIZE; j++) {
+      char piece = board[i][j];
+
+      // Skip if it's an empty square or the player's own piece
+      if ((current_player == 0 && piece >= 'A' && piece <= 'Z') ||
+          (current_player == 1 && piece >= 'a' && piece <= 'z')) {
+        continue;
+      }
+
+      // Check if the piece can move to the king's position
+      if (move_piece(i, j, king_row, king_col, 1 - current_player)) {
+        return 1; // King is in check
+      }
+    }
+  }
+
+  return 0; // King is safe
+}
+
+// Function to update king position after a move
+void update_king_position(int to_row, int to_col, int is_white) {
+  if (is_white) {
+    white_king_row = to_row;
+    white_king_col = to_col;
+  } else {
+    black_king_row = to_row;
+    black_king_col = to_col;
+  }
+}
+
+// Modified move_piece function to handle check validation
+int move_piece(int from_row, int from_col, int to_row, int to_col,
+               int current_player) {
+  char piece = board[from_row][from_col];
+
+  // Store original position and piece for reverting if needed
+  char original_target = board[to_row][to_col];
+  int original_king_row =
+      (current_player == 0) ? white_king_row : black_king_row;
+  int original_king_col =
+      (current_player == 0) ? white_king_col : black_king_col;
+
+  if (!is_valid_move(from_row, from_col, to_row, to_col, current_player)) {
+    return 0;
+  }
+
+  // Make the move
+  board[to_row][to_col] = board[from_row][from_col];
+  board[from_row][from_col] = ' ';
+
+  // Update king position if it was moved
+  if ((piece == 'K' && current_player == 0) ||
+      (piece == 'k' && current_player == 1)) {
+    update_king_position(to_row, to_col, current_player == 0);
+  }
+
+  // Check if the move puts or leaves own king in check
+  if (is_king_in_check(current_player == 0)) {
+    // Revert the move
+    board[from_row][from_col] = piece;
+    board[to_row][to_col] = original_target;
+    if ((piece == 'K' && current_player == 0) ||
+        (piece == 'k' && current_player == 1)) {
+      update_king_position(original_king_row, original_king_col,
+                           current_player == 0);
+    }
+    printf("Invalid move: puts or leaves own king in check\n");
+    return 0;
+  }
+
+  // Check if this move puts the opponent's king in check
+  if (is_king_in_check(current_player != 0)) {
+    printf("Check!\n");
+  }
+
+  return 1;
+}
 
 int is_valid_move(int from_row, int from_col, int to_row, int to_col,
                   int current_player) {
@@ -241,23 +387,13 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
   case 'Q':
   case 'q':
     return is_valid_queen_move(from_row, from_col, to_row, to_col);
-  // TODO: Implement validation for the rest
+  case 'K':
+  case 'k':
+    return is_valid_king_move(from_row, from_col, to_row, to_col);
   default:
     printf("Unrecognized piece\n");
     return 0;
   }
-}
-
-int move_piece(int from_row, int from_col, int to_row, int to_col,
-               int current_player) {
-  if (!is_valid_move(from_row, from_col, to_row, to_col, current_player)) {
-    return 0; // invalid
-  }
-
-  board[to_row][to_col] = board[from_row][from_col];
-  board[from_row][from_col] = ' ';
-
-  return 1; // valid
 }
 
 int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,

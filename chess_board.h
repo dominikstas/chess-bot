@@ -31,5 +31,6 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
                int current_player);
 int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
                int *to_col);
+int is_checkmate(int is_white);
 
 #endif
