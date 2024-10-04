@@ -234,177 +234,118 @@ int is_valid_king_move(int from_row, int from_col, int to_row, int to_col) {
   return 1;
 }
 
-// Helper function to check if a square is under attack
-int is_square_under_attack(int row, int col, int by_white) {
+int is_in_check(int king_row, int king_col, int current_player) {
   for (int i = 0; i < BOARD_SIZE; i++) {
     for (int j = 0; j < BOARD_SIZE; j++) {
       char piece = board[i][j];
-      if (piece == ' ')
-        continue;
-
-      // Check if the piece belongs to the attacking side
-      if (by_white && (piece < 'A' || piece > 'Z'))
-        continue;
-      if (!by_white && (piece < 'a' || piece > 'z'))
-        continue;
-
-      // Temporarily set the target square to empty to allow checking through
-      // pieces
-      char temp = board[row][col];
-      board[row][col] = ' ';
-
-      int valid_attack = is_valid_move(i, j, row, col, by_white);
-
-      // Restore the original piece
-      board[row][col] = temp;
-
-      if (valid_attack)
-        return 1;
-    }
-  }
-  return 0;
-}
-
-int is_king_in_check(int king_row, int king_col, int current_player) {
-  // Traverse the board and check if any opposing piece can attack the king.
-  // The exact implementation depends on the valid move checks for each piece
-  // type.
-
-  for (int i = 0; i < BOARD_SIZE; i++) {
-    for (int j = 0; j < BOARD_SIZE; j++) {
-      char piece = board[i][j];
-
-      // Skip if it's an empty square or the player's own piece
-      if ((current_player == 0 && piece >= 'A' && piece <= 'Z') ||
-          (current_player == 1 && piece >= 'a' && piece <= 'z')) {
-        continue;
-      }
-
-      // Check if the piece can move to the king's position
-      if (move_piece(i, j, king_row, king_col, 1 - current_player)) {
-        return 1; // King is in check
+      if ((current_player == 0 && piece >= 'a' &&
+           piece <= 'z') || // Sprawdzenie czarnych figur
+          (current_player == 1 && piece >= 'A' &&
+           piece <= 'Z')) { // Sprawdzenie białych figur
+        if (is_valid_move(i, j, king_row, king_col,
+                          (current_player == 0 ? 1 : 0))) {
+          return 1; // Król jest w szachu
+        }
       }
     }
   }
-
-  return 0; // King is safe
+  return 0; // Król nie jest w szachu
 }
 
-// Function to update king position after a move
-void update_king_position(int to_row, int to_col, int is_white) {
-  if (is_white) {
-    white_king_row = to_row;
-    white_king_col = to_col;
-  } else {
-    black_king_row = to_row;
-    black_king_col = to_col;
-  }
-}
-
-// Function to check if the current player is in checkmate
-int is_checkmate(int current_player) {
-  int king_row = (current_player == 0) ? white_king_row : black_king_row;
-  int king_col = (current_player == 0) ? white_king_col : black_king_col;
-
-  // If the king is not in check, it's not checkmate
-  if (!is_king_in_check(king_row, king_col, current_player)) {
-    return 0;
+int is_checkmate(int king_row, int king_col, int current_player) {
+  if (!is_in_check(king_row, king_col, current_player)) {
+    return 0; // Król nie jest w szachu, więc nie ma mata
   }
 
-  // Traverse all pieces of the current player and check if any valid move
-  // exists
+  // Sprawdzamy wszystkie możliwe ruchy, aby zobaczyć, czy można uciec z szacha
   for (int i = 0; i < BOARD_SIZE; i++) {
     for (int j = 0; j < BOARD_SIZE; j++) {
       char piece = board[i][j];
+      if ((current_player == 0 && piece >= 'A' &&
+           piece <= 'Z') || // Białe figury
+          (current_player == 1 && piece >= 'a' &&
+           piece <= 'z')) { // Czarne figury
+        for (int to_row = 0; to_row < BOARD_SIZE; to_row++) {
+          for (int to_col = 0; to_col < BOARD_SIZE; to_col++) {
+            if (is_valid_move(i, j, to_row, to_col, current_player)) {
+              // Symulacja ruchu
+              char temp = board[to_row][to_col];
+              board[to_row][to_col] = board[i][j];
+              board[i][j] = ' ';
 
-      // Skip empty squares and opponent's pieces
-      if ((current_player == 0 && piece >= 'a' && piece <= 'z') ||
-          (current_player == 1 && piece >= 'A' && piece <= 'Z') ||
-          piece == ' ') {
-        continue;
-      }
+              // Sprawdzenie, czy król wciąż jest w szachu po ruchu
+              if (!is_in_check(king_row, king_col, current_player)) {
+                // Cofamy ruch
+                board[i][j] = board[to_row][to_col];
+                board[to_row][to_col] = temp;
+                return 0; // Można uniknąć mata
+              }
 
-      // Try all possible moves for the piece
-      for (int to_row = 0; to_row < BOARD_SIZE; to_row++) {
-        for (int to_col = 0; to_col < BOARD_SIZE; to_col++) {
-          // Temporarily make the move and check if it's valid
-          char original_target = board[to_row][to_col];
-          char moving_piece = board[i][j];
-          board[to_row][to_col] = moving_piece;
-          board[i][j] = ' ';
-
-          int king_safe = !is_king_in_check(king_row, king_col, current_player);
-
-          // Undo the move
-          board[i][j] = moving_piece;
-          board[to_row][to_col] = original_target;
-
-          if (king_safe) {
-            return 0; // There's a valid move, so it's not checkmate
+              // Cofamy ruch
+              board[i][j] = board[to_row][to_col];
+              board[to_row][to_col] = temp;
+            }
           }
         }
       }
     }
   }
 
-  // If no valid moves exist and the king is in check, it's checkmate
-  return 1;
+  return 1; // Mat
 }
 
 int move_piece(int from_row, int from_col, int to_row, int to_col,
                int current_player) {
   char piece = board[from_row][from_col];
 
-  // Store original position and piece for reverting if needed
-  char original_target = board[to_row][to_col];
-  int original_king_row =
-      (current_player == 0) ? white_king_row : black_king_row;
-  int original_king_col =
-      (current_player == 0) ? white_king_col : black_king_col;
-
+  // Sprawdzenie, czy ruch jest legalny
   if (!is_valid_move(from_row, from_col, to_row, to_col, current_player)) {
     return 0;
   }
 
-  // Make the move
-  board[to_row][to_col] = board[from_row][from_col];
-  board[from_row][from_col] = ' ';
-
-  // Update king position if it was moved
-  if ((piece == 'K' && current_player == 0) ||
-      (piece == 'k' && current_player == 1)) {
-    update_king_position(to_row, to_col, current_player == 0);
-  }
-
-  // Get current king position
+  // Zapisujemy pozycje przed wykonaniem ruchu
+  char original_target = board[to_row][to_col];
   int king_row = (current_player == 0) ? white_king_row : black_king_row;
   int king_col = (current_player == 0) ? white_king_col : black_king_col;
 
-  // Check if the move puts or leaves own king in check
-  if (is_king_in_check(king_row, king_col, current_player)) {
-    // Revert the move
-    board[from_row][from_col] = piece;
-    board[to_row][to_col] = original_target;
-    if ((piece == 'K' && current_player == 0) ||
-        (piece == 'k' && current_player == 1)) {
-      update_king_position(original_king_row, original_king_col,
-                           current_player == 0);
+  // Wykonanie ruchu
+  board[to_row][to_col] = board[from_row][from_col];
+  board[from_row][from_col] = ' ';
+
+  // Aktualizacja pozycji króla, jeśli to król się poruszył
+  if (piece == 'K' || piece == 'k') {
+    if (current_player == 0) {
+      white_king_row = to_row;
+      white_king_col = to_col;
+    } else {
+      black_king_row = to_row;
+      black_king_col = to_col;
     }
-    printf("Invalid move: puts or leaves own king in check\n");
+  }
+
+  // Sprawdzamy, czy własny król jest w szachu po ruchu
+  if (is_in_check(king_row, king_col, current_player)) {
+    // Cofamy ruch
+    board[from_row][from_col] = board[to_row][to_col];
+    board[to_row][to_col] = original_target;
+
+    printf("Ruch nielegalny, ponieważ własny król jest szachowany\n");
     return 0;
   }
 
-  // Get opponent's king position
-  int opp_king_row = (current_player == 0) ? black_king_row : white_king_row;
-  int opp_king_col = (current_player == 0) ? black_king_col : white_king_col;
+  // Sprawdzamy, czy przeciwnik jest w szachu
+  int opponent_king_row =
+      (current_player == 0) ? black_king_row : white_king_row;
+  int opponent_king_col =
+      (current_player == 0) ? black_king_col : white_king_col;
 
-  // Check if this move puts the opponent's king in check
-  if (is_king_in_check(opp_king_row, opp_king_col, 1 - current_player)) {
-    printf("Check!\n");
-
-    // Check for checkmate
-    if (is_checkmate(1 - current_player)) {
-      printf("Checkmate! Player %d wins!\n", current_player + 1);
+  if (is_in_check(opponent_king_row, opponent_king_col, 1 - current_player)) {
+    if (is_checkmate(opponent_king_row, opponent_king_col,
+                     1 - current_player)) {
+      printf("Szach mat! Gracz %d wygrywa!\n", current_player + 1);
+      exit(0); // Kończymy grę
+    } else {
+      printf("Szach dla gracza %d!\n", 1 - current_player + 1);
     }
   }
 
