@@ -301,7 +301,56 @@ void update_king_position(int to_row, int to_col, int is_white) {
   }
 }
 
-// Modified move_piece function to handle check validation
+// Function to check if the current player is in checkmate
+int is_checkmate(int current_player) {
+  int king_row = (current_player == 0) ? white_king_row : black_king_row;
+  int king_col = (current_player == 0) ? white_king_col : black_king_col;
+
+  // If the king is not in check, it's not checkmate
+  if (!is_king_in_check(king_row, king_col, current_player)) {
+    return 0;
+  }
+
+  // Traverse all pieces of the current player and check if any valid move
+  // exists
+  for (int i = 0; i < BOARD_SIZE; i++) {
+    for (int j = 0; j < BOARD_SIZE; j++) {
+      char piece = board[i][j];
+
+      // Skip empty squares and opponent's pieces
+      if ((current_player == 0 && piece >= 'a' && piece <= 'z') ||
+          (current_player == 1 && piece >= 'A' && piece <= 'Z') ||
+          piece == ' ') {
+        continue;
+      }
+
+      // Try all possible moves for the piece
+      for (int to_row = 0; to_row < BOARD_SIZE; to_row++) {
+        for (int to_col = 0; to_col < BOARD_SIZE; to_col++) {
+          // Temporarily make the move and check if it's valid
+          char original_target = board[to_row][to_col];
+          char moving_piece = board[i][j];
+          board[to_row][to_col] = moving_piece;
+          board[i][j] = ' ';
+
+          int king_safe = !is_king_in_check(king_row, king_col, current_player);
+
+          // Undo the move
+          board[i][j] = moving_piece;
+          board[to_row][to_col] = original_target;
+
+          if (king_safe) {
+            return 0; // There's a valid move, so it's not checkmate
+          }
+        }
+      }
+    }
+  }
+
+  // If no valid moves exist and the king is in check, it's checkmate
+  return 1;
+}
+
 int move_piece(int from_row, int from_col, int to_row, int to_col,
                int current_player) {
   char piece = board[from_row][from_col];
@@ -327,8 +376,12 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
     update_king_position(to_row, to_col, current_player == 0);
   }
 
+  // Get current king position
+  int king_row = (current_player == 0) ? white_king_row : black_king_row;
+  int king_col = (current_player == 0) ? white_king_col : black_king_col;
+
   // Check if the move puts or leaves own king in check
-  if (is_king_in_check(current_player == 0)) {
+  if (is_king_in_check(king_row, king_col, current_player)) {
     // Revert the move
     board[from_row][from_col] = piece;
     board[to_row][to_col] = original_target;
@@ -341,9 +394,18 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
     return 0;
   }
 
+  // Get opponent's king position
+  int opp_king_row = (current_player == 0) ? black_king_row : white_king_row;
+  int opp_king_col = (current_player == 0) ? black_king_col : white_king_col;
+
   // Check if this move puts the opponent's king in check
-  if (is_king_in_check(current_player != 0)) {
+  if (is_king_in_check(opp_king_row, opp_king_col, 1 - current_player)) {
     printf("Check!\n");
+
+    // Check for checkmate
+    if (is_checkmate(1 - current_player)) {
+      printf("Checkmate! Player %d wins!\n", current_player + 1);
+    }
   }
 
   return 1;
