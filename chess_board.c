@@ -253,37 +253,53 @@ int is_in_check(int king_row, int king_col, int current_player) {
 }
 
 int is_checkmate(int king_row, int king_col, int current_player) {
+  // Jeśli król nie jest w szachu, to na pewno nie ma mata
   if (!is_in_check(king_row, king_col, current_player)) {
-    return 0; // Król nie jest w szachu, więc nie ma mata
+    return 0;
   }
 
-  // Sprawdzamy wszystkie możliwe ruchy, aby zobaczyć, czy można uciec z szacha
-  for (int i = 0; i < BOARD_SIZE; i++) {
-    for (int j = 0; j < BOARD_SIZE; j++) {
-      char piece = board[i][j];
-      if ((current_player == 0 && piece >= 'A' &&
-           piece <= 'Z') || // Białe figury
-          (current_player == 1 && piece >= 'a' &&
-           piece <= 'z')) { // Czarne figury
-        for (int to_row = 0; to_row < BOARD_SIZE; to_row++) {
-          for (int to_col = 0; to_col < BOARD_SIZE; to_col++) {
-            if (is_valid_move(i, j, to_row, to_col, current_player)) {
-              // Symulacja ruchu
-              char temp = board[to_row][to_col];
-              board[to_row][to_col] = board[i][j];
-              board[i][j] = ' ';
+  // Sprawdzamy wszystkie możliwe ruchy wszystkich figur gracza
+  for (int from_row = 0; from_row < BOARD_SIZE; from_row++) {
+    for (int from_col = 0; from_col < BOARD_SIZE; from_col++) {
+      char piece = board[from_row][from_col];
 
-              // Sprawdzenie, czy król wciąż jest w szachu po ruchu
-              if (!is_in_check(king_row, king_col, current_player)) {
-                // Cofamy ruch
-                board[i][j] = board[to_row][to_col];
-                board[to_row][to_col] = temp;
-                return 0; // Można uniknąć mata
-              }
+      // Sprawdzamy tylko figury aktualnego gracza
+      if ((current_player == 0 && (piece < 'A' || piece > 'Z')) ||
+          (current_player == 1 && (piece < 'a' || piece > 'z'))) {
+        continue;
+      }
 
-              // Cofamy ruch
-              board[i][j] = board[to_row][to_col];
-              board[to_row][to_col] = temp;
+      // Sprawdzamy wszystkie możliwe pola docelowe
+      for (int to_row = 0; to_row < BOARD_SIZE; to_row++) {
+        for (int to_col = 0; to_col < BOARD_SIZE; to_col++) {
+          // Sprawdzamy, czy ruch jest dozwolony
+          if (is_valid_move(from_row, from_col, to_row, to_col,
+                            current_player)) {
+            // Wykonujemy ruch tymczasowo
+            char temp = board[to_row][to_col];
+            board[to_row][to_col] = board[from_row][from_col];
+            board[from_row][from_col] = ' ';
+
+            // Aktualizujemy pozycję króla, jeśli to król się poruszył
+            int temp_king_row = king_row;
+            int temp_king_col = king_col;
+            if ((piece == 'K' || piece == 'k') &&
+                (from_row == king_row && from_col == king_col)) {
+              temp_king_row = to_row;
+              temp_king_col = to_col;
+            }
+
+            // Sprawdzamy, czy po tym ruchu król nadal jest w szachu
+            int still_in_check =
+                is_in_check(temp_king_row, temp_king_col, current_player);
+
+            // Cofamy ruch
+            board[from_row][from_col] = board[to_row][to_col];
+            board[to_row][to_col] = temp;
+
+            // Jeśli znaleźliśmy ruch, który usuwa szacha, to nie ma mata
+            if (!still_in_check) {
+              return 0;
             }
           }
         }
@@ -291,7 +307,9 @@ int is_checkmate(int king_row, int king_col, int current_player) {
     }
   }
 
-  return 1; // Mat
+  // Jeśli dotarliśmy tutaj, to znaczy, że nie znaleźliśmy żadnego ruchu
+  // który usunąłby szacha - mamy mata
+  return 1;
 }
 
 int move_piece(int from_row, int from_col, int to_row, int to_col,
