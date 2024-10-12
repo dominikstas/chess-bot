@@ -203,33 +203,6 @@ int is_valid_queen_move(int from_row, int from_col, int to_row, int to_col) {
   return 0;
 }
 
-// King movement validation
-int is_valid_king_move(int from_row, int from_col, int to_row, int to_col) {
-  // Regular king move: one square in any direction
-  int row_diff = abs(to_row - from_row);
-  int col_diff = abs(to_col - from_col);
-
-  if (row_diff > 1 || col_diff > 1) {
-    return 0;
-  }
-
-  // Check if the target square has a piece of the same color
-  char piece = board[from_row][from_col];
-  char target_piece = board[to_row][to_col];
-  if (target_piece != ' ') {
-    if ((piece >= 'A' && piece <= 'Z' && target_piece >= 'A' &&
-         target_piece <= 'Z') ||
-        (piece >= 'a' && piece <= 'z' && target_piece >= 'a' &&
-         target_piece <= 'z')) {
-      return 0;
-    }
-  }
-
-  // TODO: Add castling logic here if desired
-
-  return 1;
-}
-
 int is_in_check(int king_row, int king_col, int current_player) {
   for (int i = 0; i < BOARD_SIZE; i++) {
     for (int j = 0; j < BOARD_SIZE; j++) {
@@ -384,6 +357,79 @@ int is_valid_move(int from_row, int from_col, int to_row, int to_col,
       printf("Black player cannot move white pieces\n");
       return 0;
     }
+  }
+
+  int can_castle(int from_row, int from_col, int to_row, int to_col,
+                 int current_player) {
+    // Only allow castling if the king is moving exactly two squares
+    // horizontally
+    if (abs(to_col - from_col) != 2 || from_row != to_row) {
+      return 0;
+    }
+
+    // Check if the king or corresponding rook has moved
+    if ((current_player == 0 &&
+         (white_king_moved ||
+          (to_col > from_col ? white_kingside_rook_moved
+                             : white_queenside_rook_moved))) ||
+        (current_player == 1 &&
+         (black_king_moved ||
+          (to_col > from_col ? black_kingside_rook_moved
+                             : black_queenside_rook_moved)))) {
+      return 0;
+    }
+
+    // Ensure no pieces are between the king and rook
+    int col_step = (to_col > from_col) ? 1 : -1;
+    for (int i = from_col + col_step; i != to_col; i += col_step) {
+      if (board[from_row][i] != ' ') {
+        return 0;
+      }
+    }
+
+    // Check if the king is in check, or would pass through/land on a square in
+    // check
+    if (is_in_check(from_row, from_col, current_player) ||
+        is_in_check(from_row, from_col + col_step, current_player) ||
+        is_in_check(from_row, to_col, current_player)) {
+      return 0;
+    }
+
+    // Castling is valid, so move the rook as well
+    if (to_col > from_col) {
+      board[from_row][from_col + 1] = board[from_row][7]; // Kingside rook
+      board[from_row][7] = ' ';
+    } else {
+      board[from_row][from_col - 1] = board[from_row][0]; // Queenside rook
+      board[from_row][0] = ' ';
+    }
+
+    return 1;
+  }
+
+  int is_valid_king_move(int from_row, int from_col, int to_row, int to_col) {
+    int row_diff = abs(to_row - from_row);
+    int col_diff = abs(to_col - from_col);
+
+    // Check for castling
+    if (row_diff == 0 && abs(col_diff) == 2) {
+      return can_castle(from_row, from_col, to_row, to_col, current_player);
+    }
+
+    // Regular king move
+    if (row_diff > 1 || col_diff > 1) {
+      return 0;
+    }
+
+    char target_piece = board[to_row][to_col];
+    if (target_piece != ' ') {
+      if ((board[from_row][from_col] >= 'A' && target_piece >= 'A') ||
+          (board[from_row][from_col] >= 'a' && target_piece >= 'a')) {
+        return 0;
+      }
+    }
+
+    return 1;
   }
 
   switch (piece) {
