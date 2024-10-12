@@ -52,39 +52,47 @@ void print_board() {
 
 // check the move for all pieces
 
-// Pawn (WITHOUT EN PASSANT)
+// Pawn (BUG EN PASSANT)
+// Global variables to track en passant state
+int en_passant_row = -1, en_passant_col = -1;
+
 int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   char piece = board[from_row][from_col];
-  int direction = (piece == 'P') ? 1 : -1; // 'P' for white pawn, moving up
+  int direction = (piece == 'P') ? 1 : -1;
   int start_row = (piece == 'P') ? 1 : 6;
 
-  // Move one square forward
+  // Regular move: one square forward
   if (from_col == to_col && to_row == from_row + direction &&
       board[to_row][to_col] == ' ') {
     return 1;
   }
 
-  // Move two squares forward (only from the starting position)
+  // Two squares forward from starting position
   if (from_col == to_col && from_row == start_row &&
       to_row == from_row + 2 * direction &&
       board[from_row + direction][from_col] == ' ' &&
       board[to_row][to_col] == ' ') {
+    en_passant_row = to_row;
+    en_passant_col = to_col;
     return 1;
   }
 
   // Capture diagonally
-  if ((to_col == from_col - 1 || to_col == from_col + 1) &&
-      to_row == from_row + direction) {
+  if (abs(to_col - from_col) == 1 && to_row == from_row + direction) {
     char target = board[to_row][to_col];
-    if (target != ' ' && ((piece == 'P' && target >= 'a' &&
-                           target <= 'z') || // white pawn captures black piece
-                          (piece == 'p' && target >= 'A' &&
-                           target <= 'Z'))) { // black pawn captures white piece
+    if (target != ' ' && ((piece == 'P' && target >= 'a' && target <= 'z') ||
+                          (piece == 'p' && target >= 'A' && target <= 'Z'))) {
+      return 1;
+    }
+
+    // En passant capture
+    if (to_row == en_passant_row && to_col == en_passant_col) {
+      board[en_passant_row - direction][to_col] =
+          ' '; // Remove the captured pawn
       return 1;
     }
   }
 
-  // TO DO: en passant
   return 0;
 }
 
