@@ -1,4 +1,5 @@
 #include "chess_board.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,14 @@ Piece board[BOARD_SIZE][BOARD_SIZE];
 // Global variables to track king positions
 int white_king_row = 0, white_king_col = 4;
 int black_king_row = 7, black_king_col = 4;
+
+// Global variables to track castling
+int white_king_moved = 0, black_king_moved = 0;
+int white_kingside_rook_moved = 0, white_queenside_rook_moved = 0;
+int black_kingside_rook_moved = 0, black_queenside_rook_moved = 0;
+
+// Global variables to track en passant state
+int en_passant_row = -1, en_passant_col = -1;
 
 void initialize_board() {
   for (int i = 0; i < BOARD_SIZE; i++) {
@@ -53,8 +62,6 @@ void print_board() {
 // check the move for all pieces
 
 // Pawn (BUG EN PASSANT)
-// Global variables to track en passant state
-int en_passant_row = -1, en_passant_col = -1;
 
 int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   char piece = board[from_row][from_col];
@@ -281,6 +288,115 @@ int is_checkmate(int king_row, int king_col, int current_player) {
   return 1;
 }
 
+int can_castle(int from_row, int from_col, int to_row, int to_col,
+               int current_player) {
+  // Only allow castling if the king is moving exactly two squares
+  // horizontally
+  if (abs(to_col - from_col) != 2 || from_row != to_row) {
+    return 0;
+  }
+
+  // Check if the king or corresponding rook has moved
+  if ((current_player == 0 &&
+       (white_king_moved ||
+        (to_col > from_col ? white_kingside_rook_moved
+                           : white_queenside_rook_moved))) ||
+      (current_player == 1 &&
+       (black_king_moved ||
+        (to_col > from_col ? black_kingside_rook_moved
+                           : black_queenside_rook_moved)))) {
+    return 0;
+  }
+
+  // Ensure no pieces are between the king and rook
+  int col_step = (to_col > from_col) ? 1 : -1;
+  for (int i = from_col + col_step; i != (to_col > from_col ? 7 : 0);
+       i += col_step) {
+    if (board[from_row][i] != ' ') {
+      return 0;
+    }
+  }
+
+  // Check if the king is in check, or would pass through/land on a square in
+  // check
+  if (is_in_check(from_row, from_col, current_player) ||
+      is_in_check(from_row, from_col + col_step, current_player) ||
+      is_in_check(from_row, to_col, current_player)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int is_valid_king_move(int from_row, int from_col, int to_row, int to_col,
+                       int current_player) {
+  int row_diff = abs(to_row - from_row);
+  int col_diff = abs(to_col - from_col);
+
+  // Check for castling
+  if (row_diff == 0 && col_diff == 2) {
+    return can_castle(from_row, from_col, to_row, to_col, current_player);
+  }
+
+  // Regular king move
+  if (row_diff > 1 || col_diff > 1) {
+    return 0;
+  }
+
+  char target_piece = board[to_row][to_col];
+  if (target_piece != ' ') {
+    if ((board[from_row][from_col] >= 'A' && board[from_row][from_col] <= 'Z' &&
+         target_piece >= 'A' && target_piece <= 'Z') ||
+        (board[from_row][from_col] >= 'a' && board[from_row][from_col] <= 'z' &&
+         target_piece >= 'a' && target_piece <= 'z')) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+int is_valid_move(int from_row, int from_col, int to_row, int to_col,
+                  int current_player) {
+  char piece = board[from_row][from_col];
+
+  if (piece == ' ') {
+    printf("No piece to move\n");
+    return 0;
+  }
+
+  // Check if the player is moving their own piece
+  if (current_player == 0) { // White player
+    if (piece >= 'a' && piece <= 'z') {
+      printf("White player cannot move black pieces\n");
+      return 0;
+    }
+  } else { // Black player
+    if (piece >= 'A' && piece <= 'Z') {
+      printf("Black player cannot move white pieces\n");
+      return 0;
+    }
+  }
+
+  switch (toupper(piece)) {
+  case 'P':
+    return is_valid_pawn_move(from_row, from_col, to_row, to_col);
+  case 'R':
+    return is_valid_rook_move(from_row, from_col, to_row, to_col);
+  case 'B':
+    return is_valid_bishop_move(from_row, from_col, to_row, to_col);
+  case 'N':
+    return is_valid_knight_move(from_row, from_col, to_row, to_col);
+  case 'Q':
+    return is_valid_queen_move(from_row, from_col, to_row, to_col);
+  case 'K':
+    return is_valid_king_move(from_row, from_col, to_row, to_col,
+                              current_player);
+  default:
+    printf("Unrecognized piece\n");
+    return 0;
+  }
+}
+
 int move_piece(int from_row, int from_col, int to_row, int to_col,
                int current_player) {
   char piece = board[from_row][from_col];
@@ -335,126 +451,6 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
   }
 
   return 1;
-}
-
-int is_valid_move(int from_row, int from_col, int to_row, int to_col,
-                  int current_player) {
-  char piece = board[from_row][from_col];
-
-  if (piece == ' ') {
-    printf("No piece to move\n");
-    return 0;
-  }
-
-  // Check if the player is moving their own piece
-  if (current_player == 0) { // White player
-    if (piece >= 'a' && piece <= 'z') {
-      printf("White player cannot move black pieces\n");
-      return 0;
-    }
-  } else { // Black player
-    if (piece >= 'A' && piece <= 'Z') {
-      printf("Black player cannot move white pieces\n");
-      return 0;
-    }
-  }
-
-  int can_castle(int from_row, int from_col, int to_row, int to_col,
-                 int current_player) {
-    // Only allow castling if the king is moving exactly two squares
-    // horizontally
-    if (abs(to_col - from_col) != 2 || from_row != to_row) {
-      return 0;
-    }
-
-    // Check if the king or corresponding rook has moved
-    if ((current_player == 0 &&
-         (white_king_moved ||
-          (to_col > from_col ? white_kingside_rook_moved
-                             : white_queenside_rook_moved))) ||
-        (current_player == 1 &&
-         (black_king_moved ||
-          (to_col > from_col ? black_kingside_rook_moved
-                             : black_queenside_rook_moved)))) {
-      return 0;
-    }
-
-    // Ensure no pieces are between the king and rook
-    int col_step = (to_col > from_col) ? 1 : -1;
-    for (int i = from_col + col_step; i != to_col; i += col_step) {
-      if (board[from_row][i] != ' ') {
-        return 0;
-      }
-    }
-
-    // Check if the king is in check, or would pass through/land on a square in
-    // check
-    if (is_in_check(from_row, from_col, current_player) ||
-        is_in_check(from_row, from_col + col_step, current_player) ||
-        is_in_check(from_row, to_col, current_player)) {
-      return 0;
-    }
-
-    // Castling is valid, so move the rook as well
-    if (to_col > from_col) {
-      board[from_row][from_col + 1] = board[from_row][7]; // Kingside rook
-      board[from_row][7] = ' ';
-    } else {
-      board[from_row][from_col - 1] = board[from_row][0]; // Queenside rook
-      board[from_row][0] = ' ';
-    }
-
-    return 1;
-  }
-
-  int is_valid_king_move(int from_row, int from_col, int to_row, int to_col) {
-    int row_diff = abs(to_row - from_row);
-    int col_diff = abs(to_col - from_col);
-
-    // Check for castling
-    if (row_diff == 0 && abs(col_diff) == 2) {
-      return can_castle(from_row, from_col, to_row, to_col, current_player);
-    }
-
-    // Regular king move
-    if (row_diff > 1 || col_diff > 1) {
-      return 0;
-    }
-
-    char target_piece = board[to_row][to_col];
-    if (target_piece != ' ') {
-      if ((board[from_row][from_col] >= 'A' && target_piece >= 'A') ||
-          (board[from_row][from_col] >= 'a' && target_piece >= 'a')) {
-        return 0;
-      }
-    }
-
-    return 1;
-  }
-
-  switch (piece) {
-  case 'P':
-  case 'p':
-    return is_valid_pawn_move(from_row, from_col, to_row, to_col);
-  case 'R':
-  case 'r':
-    return is_valid_rook_move(from_row, from_col, to_row, to_col);
-  case 'B':
-  case 'b':
-    return is_valid_bishop_move(from_row, from_col, to_row, to_col);
-  case 'N':
-  case 'n':
-    return is_valid_knight_move(from_row, from_col, to_row, to_col);
-  case 'Q':
-  case 'q':
-    return is_valid_queen_move(from_row, from_col, to_row, to_col);
-  case 'K':
-  case 'k':
-    return is_valid_king_move(from_row, from_col, to_row, to_col);
-  default:
-    printf("Unrecognized piece\n");
-    return 0;
-  }
 }
 
 int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
