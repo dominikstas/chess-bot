@@ -61,7 +61,9 @@ void print_board() {
 
 // check the move for all pieces
 
-// Pawn (BUG EN PASSANT)
+// Pawn
+
+int last_pawn_double_move_col = -1; // Add this new global variable
 
 int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
   char piece = board[from_row][from_col];
@@ -79,30 +81,41 @@ int is_valid_pawn_move(int from_row, int from_col, int to_row, int to_col) {
       to_row == from_row + 2 * direction &&
       board[from_row + direction][from_col] == ' ' &&
       board[to_row][to_col] == ' ') {
-    en_passant_row = to_row;
-    en_passant_col = to_col;
+    en_passant_row = from_row + direction; // Changed this line
+    en_passant_col = from_col;             // Changed this line
+    last_pawn_double_move_col =
+        from_col; // Track the column of the pawn that moved
     return 1;
   }
 
   // Capture diagonally
   if (abs(to_col - from_col) == 1 && to_row == from_row + direction) {
     char target = board[to_row][to_col];
+    // Normal capture
     if (target != ' ' && ((piece == 'P' && target >= 'a' && target <= 'z') ||
                           (piece == 'p' && target >= 'A' && target <= 'Z'))) {
       return 1;
     }
 
     // En passant capture
-    if (to_row == en_passant_row && to_col == en_passant_col) {
-      board[en_passant_row - direction][to_col] =
-          ' '; // Remove the captured pawn
-      return 1;
+    if (to_row == en_passant_row && to_col == last_pawn_double_move_col) {
+      // The captured pawn is on the same row as the capturing pawn
+      if (board[from_row][to_col] == (piece == 'P' ? 'p' : 'P')) {
+        board[from_row][to_col] = ' '; // Remove the captured pawn
+        return 1;
+      }
     }
   }
 
   return 0;
 }
 
+// Add this function to reset en passant state after each move
+void reset_en_passant() {
+  en_passant_row = -1;
+  en_passant_col = -1;
+  last_pawn_double_move_col = -1;
+}
 // Rook
 int is_valid_rook_move(int from_row, int from_col, int to_row, int to_col) {
   if (from_row != to_row && from_col != to_col) {
@@ -432,6 +445,11 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
     board[from_row][from_col] = board[to_row][to_col];
     board[to_row][to_col] = original_target;
     return 0;
+  }
+
+  // Reset en passant state after a successful move
+  if (toupper(piece) != 'P' || abs(to_row - from_row) != 2) {
+    reset_en_passant();
   }
 
   // Check if opponent is in check
