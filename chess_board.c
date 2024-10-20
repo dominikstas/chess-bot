@@ -303,39 +303,56 @@ int is_checkmate(int king_row, int king_col, int current_player) {
 
 int can_castle(int from_row, int from_col, int to_row, int to_col,
                int current_player) {
-  // Only allow castling if the king is moving exactly two squares
-  // horizontally
+  // Only allow castling if the king is moving exactly two squares horizontally
   if (abs(to_col - from_col) != 2 || from_row != to_row) {
     return 0;
   }
 
-  // Check if the king or corresponding rook has moved
-  if ((current_player == 0 &&
-       (white_king_moved ||
-        (to_col > from_col ? white_kingside_rook_moved
-                           : white_queenside_rook_moved))) ||
-      (current_player == 1 &&
-       (black_king_moved ||
-        (to_col > from_col ? black_kingside_rook_moved
-                           : black_queenside_rook_moved)))) {
+  // Get the correct row based on player
+  int castle_row = (current_player == 0) ? 0 : 7;
+
+  // Verify we're actually moving from the correct starting position
+  if (from_row != castle_row || from_col != 4) {
     return 0;
   }
 
-  // Ensure no pieces are between the king and rook
-  int col_step = (to_col > from_col) ? 1 : -1;
-  for (int i = from_col + col_step; i != (to_col > from_col ? 7 : 0);
-       i += col_step) {
-    if (board[from_row][i] != ' ') {
+  // Check if the king or corresponding rook has moved
+  if (current_player == 0) {
+    if (white_king_moved)
+      return 0;
+    if (to_col > from_col && white_kingside_rook_moved)
+      return 0; // Kingside
+    if (to_col < from_col && white_queenside_rook_moved)
+      return 0; // Queenside
+  } else {
+    if (black_king_moved)
+      return 0;
+    if (to_col > from_col && black_kingside_rook_moved)
+      return 0; // Kingside
+    if (to_col < from_col && black_queenside_rook_moved)
+      return 0; // Queenside
+  }
+
+  // Check if the squares between king and rook are empty
+  int rook_col = (to_col > from_col) ? 7 : 0;
+  int step = (to_col > from_col) ? 1 : -1;
+  for (int col = from_col + step; col != rook_col; col += step) {
+    if (board[from_row][col] != ' ') {
       return 0;
     }
   }
 
-  // Check if the king is in check, or would pass through/land on a square in
-  // check
-  if (is_in_check(from_row, from_col, current_player) ||
-      is_in_check(from_row, from_col + col_step, current_player) ||
-      is_in_check(from_row, to_col, current_player)) {
+  // Verify rook is present
+  char expected_rook = (current_player == 0) ? 'R' : 'r';
+  if (board[from_row][rook_col] != expected_rook) {
     return 0;
+  }
+
+  // Check if king is in check or would pass through check
+  for (int col = from_col; col != to_col + step; col += step) {
+    if (is_in_check(from_row, col, current_player)) {
+      return 0;
+    }
   }
 
   return 1;
@@ -424,26 +441,82 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
   int king_row = (current_player == 0) ? white_king_row : black_king_row;
   int king_col = (current_player == 0) ? white_king_col : black_king_col;
 
+  // Handle castling
+  int is_castling = 0;
+  int rook_from_col = -1;
+  int rook_to_col = -1;
+
+  if ((piece == 'K' || piece == 'k') && abs(to_col - from_col) == 2) {
+    is_castling = 1;
+    // Determine rook positions
+    if (to_col > from_col) { // Kingside
+      rook_from_col = 7;
+      rook_to_col = from_col + 1;
+    } else { // Queenside
+      rook_from_col = 0;
+      rook_to_col = from_col - 1;
+    }
+  }
+
   // Make the move
   board[to_row][to_col] = board[from_row][from_col];
   board[from_row][from_col] = ' ';
+
+  // Complete castling by moving the rook
+  if (is_castling) {
+    board[to_row][rook_to_col] = board[from_row][rook_from_col];
+    board[from_row][rook_from_col] = ' ';
+  }
 
   // Update king position if the king moved
   if (piece == 'K' || piece == 'k') {
     if (current_player == 0) {
       white_king_row = to_row;
       white_king_col = to_col;
+      white_king_moved = 1;
     } else {
       black_king_row = to_row;
       black_king_col = to_col;
+      black_king_moved = 1;
     }
   }
 
+  // Update rook movement flags
+  if (piece == 'R' || piece == 'r') {
+    if (from_row == 0 && from_col == 0)
+      white_queenside_rook_moved = 1;
+    if (from_row == 0 && from_col == 7)
+      white_kingside_rook_moved = 1;
+    if (from_row == 7 && from_col == 0)
+      black_queenside_rook_moved = 1;
+    if (from_row == 7 && from_col == 7)
+      black_kingside_rook_moved = 1;
+  }
+
   // Check if own king is in check after the move
-  if (is_in_check(king_row, king_col, current_player)) {
+  if (is_in_check((current_player == 0) ? white_king_row : black_king_row,
+                  (current_player == 0) ? white_king_col : black_king_col,
+                  current_player)) {
     // Undo the move
-    board[from_row][from_col] = board[to_row][to_col];
+    board[from_row][from_col] = piece;
     board[to_row][to_col] = original_target;
+    if (is_castling) {
+      // Undo rook move
+      board[from_row][rook_from_col] = board[to_row][rook_to_col];
+      board[to_row][rook_to_col] = ' ';
+    }
+    // Reset king position if it was a king move
+    if (piece == 'K' || piece == 'k') {
+      if (current_player == 0) {
+        white_king_row = from_row;
+        white_king_col = from_col;
+        white_king_moved = 0;
+      } else {
+        black_king_row = from_row;
+        black_king_col = from_col;
+        black_king_moved = 0;
+      }
+    }
     return 0;
   }
 
@@ -452,7 +525,7 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
     reset_en_passant();
   }
 
-  // Check if opponent is in check
+  // Check for check/checkmate (rest of the original function remains the same)
   int opponent_king_row =
       (current_player == 0) ? black_king_row : white_king_row;
   int opponent_king_col =
@@ -462,7 +535,7 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
     if (is_checkmate(opponent_king_row, opponent_king_col,
                      1 - current_player)) {
       printf("Checkmate! Player %d wins!\n", current_player + 1);
-      exit(0); // End the game
+      exit(0);
     } else {
       printf("Check for Player %d!\n", 1 - current_player + 1);
     }
@@ -470,7 +543,6 @@ int move_piece(int from_row, int from_col, int to_row, int to_col,
 
   return 1;
 }
-
 int parse_move(const char *move_str, int *from_row, int *from_col, int *to_row,
                int *to_col) {
   if (strlen(move_str) != 4) {
